@@ -11,12 +11,15 @@
     [clojure.core.typed :as t])
   (:import
     [java.util
-     BitSet]
+     BitSet
+     Map
+     Map$Entry]
     [clojure.data.int_map
      INode
      IntSet
      Nodes$Empty
-     INode$IterationType]))
+     INode$IterationType]
+    [clojure.lang Util APersistentMap]))
 
 (set! *warn-on-reflection* true)
 (set! *unchecked-math* true)
@@ -79,7 +82,42 @@
   clojure.lang.IPersistentCollection
 
   (equiv [this x]
-    (and (map? x) (= x (into {} this))))
+    (cond
+      (not (map? x))
+      false
+
+      (and (instance? clojure.lang.IPersistentMap x)
+           (not (instance? clojure.lang.MapEquivalence x)))
+      false
+
+      (not= (count this) (.size ^Map x))
+      false
+
+      (instance? PersistentIntMap x)
+      (loop [it1 (.iterator this)
+             it2 (.iterator ^PersistentIntMap x)]
+        (if (and (.hasNext it1) (.hasNext it2))
+          (let [^Map$Entry e1 (.next it1)
+                ^Map$Entry e2 (.next it2)]
+            (if (and e1 e2)
+              (if (and (= (.getKey e1) (.getKey e2))
+                       (= (Util/equiv (.getValue e1) (.getValue e2))))
+                (recur it1 it2)
+                false)
+              false))
+          true))
+
+      :else
+      (loop [it (.iterator this)]
+        (if (.hasNext it)
+          (let [^Map$Entry e (.next it)]
+            (if e
+              (if (and (.containsKey ^Map x (.getKey e))
+                       (Util/equiv (.getValue e) (.get ^Map x (.getKey e))))
+                (recur it)
+                false)
+              false))
+          true))))
 
   (cons [this o]
     (if (map? o)
@@ -138,10 +176,45 @@
       (.hashCode this)))
 
   (equals [this x]
-    (or (identical? this x)
-      (and
-        (map? x)
-        (= x (into {} this)))))
+    (cond
+      (identical? this x)
+      true
+
+      (not (map? x))
+      false
+
+      (and (instance? clojure.lang.IPersistentMap x)
+           (not (instance? clojure.lang.MapEquivalence x)))
+      false
+
+      (not= (count this) (.size ^Map x))
+      false
+
+      (instance? PersistentIntMap x)
+      (loop [it1 (.iterator this)
+             it2 (.iterator ^PersistentIntMap x)]
+        (if (and (.hasNext it1) (.hasNext it2))
+          (let [^Map$Entry e1 (.next it1)
+                ^Map$Entry e2 (.next it2)]
+            (if (and e1 e2)
+              (if (and (= (.getKey e1) (.getKey e2))
+                       (= (Util/equals (.getValue e1) (.getValue e2))))
+                (recur it1 it2)
+                false)
+              false))
+          true))
+
+      :else
+      (loop [it (.iterator this)]
+        (if (.hasNext it)
+          (let [^Map$Entry e (.next it)]
+            (if e
+              (if (and (.containsKey ^Map x (.getKey e))
+                       (Util/equals (.getValue e) (.get ^Map x (.getKey e))))
+                (recur it)
+                false)
+              false))
+          true))))
 
   (toString [this]
     (str (into {} this)))
@@ -469,6 +542,11 @@
   (meta [_] meta)
   (withMeta [this meta']
     (TransientIntSet. int-set epoch meta'))
+
+  clojure.lang.IFn
+  (invoke [this idx]
+    (when (contains? this idx)
+      idx))
 
   clojure.lang.ITransientSet
   (count [_]
