@@ -21,7 +21,7 @@
 ;; FIXME shouldn't need this, but some types
 ;; don't compile
 (delete-anns infer-files)
-(apply require (conj infer-files :reload))
+(apply require (conj infer-files :reload-all))
 
 (def tests 
   '[clojure.data.int-map-test
