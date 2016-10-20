@@ -1,11 +1,14 @@
 (ns
   ^{:doc "An adaptation of Okasaki and Gill's \"Fast Mergeable Integer Maps`\",
-          which can be found at http://ittc.ku.edu/~andygill/papers/IntMap98.pdf"}
+          which can be found at http://ittc.ku.edu/~andygill/papers/IntMap98.pdf"
+    :lang :core.typed
+    :core.typed {:features #{:runtime-infer}}}
   clojure.data.int-map
   (:refer-clojure
     :exclude [merge merge-with update range])
   (:require
-    [clojure.core.reducers :as r])
+    [clojure.core.reducers :as r]
+    [clojure.core.typed :as t])
   (:import
     [java.util
      BitSet]
